@@ -34,14 +34,14 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putString("BoardState", board.getBoardState());
         editor.apply();
-        Toast.makeText(getApplicationContext(), "Saved", Toast.LENGTH_LONG).show();
+        Toast.makeText(getApplicationContext(), "Saved", Toast.LENGTH_SHORT).show();
     }
 
     public void load() {
         SharedPreferences sharedPreferences = getSharedPreferences("Chess", MODE_PRIVATE);
         String state = sharedPreferences.getString("BoardState", "");
         if (state.equals("")) {
-            Toast.makeText(getApplicationContext(), "No save detected", Toast.LENGTH_LONG).show();
+            Toast.makeText(getApplicationContext(), "No save detected", Toast.LENGTH_SHORT).show();
             getInput("");
             return;
         }
@@ -51,9 +51,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            case R.id.action_depth:
-                getInput(0);
-                return true;
             case R.id.action_new:
                 board.newBoard();
                 getInput("");
@@ -68,6 +65,13 @@ public class MainActivity extends AppCompatActivity {
             case R.id.action_save:
                 save();
                 return true;
+            case R.id.action_depth:
+                getInput(0);
+                return true;
+            case R.id.action_undo:
+                board.undoMove();
+                board.undoMove();
+                board.render();
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -108,14 +112,14 @@ public class MainActivity extends AppCompatActivity {
         alert.setPositiveButton("Set", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
                 board.DEPTH = numberPicker.getValue();
-                Toast.makeText(getApplicationContext(), "DEPTH = " + board.DEPTH, Toast.LENGTH_LONG).show();
+                Toast.makeText(getApplicationContext(), "DEPTH = " + board.DEPTH, Toast.LENGTH_SHORT).show();
                 board.cpuSimulation();
             }
         });
         alert.setNegativeButton("Default", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
                 board.DEPTH = 4;
-                Toast.makeText(getApplicationContext(), "default DEPTH = " + board.DEPTH, Toast.LENGTH_LONG).show();
+                Toast.makeText(getApplicationContext(), "default DEPTH = " + board.DEPTH, Toast.LENGTH_SHORT).show();
                 board.cpuSimulation();
             }
         });

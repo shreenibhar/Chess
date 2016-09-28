@@ -25,9 +25,9 @@ public class Splash extends AppCompatActivity {
         }, 1500);
         SharedPreferences sharedPreferences = getSharedPreferences("Chess", MODE_PRIVATE);
         if (sharedPreferences.getString("BoardState", "").equals("")) {
-            Toast.makeText(getApplicationContext(), "No save file", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), "No save file", Toast.LENGTH_LONG).show();
         } else {
-            Toast.makeText(getApplicationContext(), "Save file detected", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), "Save file detected", Toast.LENGTH_LONG).show();
         }
     }
 }

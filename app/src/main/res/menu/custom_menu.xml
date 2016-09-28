@@ -20,4 +20,10 @@
         android:id="@+id/action_depth"
         android:title="Depth"
         app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_undo"
+        android:title="Undo"
+        android:icon="@drawable/undo"
+        app:showAsAction = "ifRoom" />
 </menu>

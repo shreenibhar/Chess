@@ -2,23 +2,23 @@ package com.barebringer.chess;
 
 public class ChessPiece {
     public char type = ' ', color = ' ';
-    public boolean touched = false;
+    public int noTouches = 0;
 
     public ChessPiece() {
         type = ' ';
         color = ' ';
-        touched = false;
+        noTouches = 0;
     }
 
     public ChessPiece(char type, char color) {
         this.type = type;
         this.color = color;
-        this.touched = false;
+        noTouches = 0;
     }
 
-    public ChessPiece(char type, char color, boolean touched) {
+    public ChessPiece(char type, char color, int noTouches) {
         this.type = type;
         this.color = color;
-        this.touched = touched;
+        this.noTouches = noTouches;
     }
 }

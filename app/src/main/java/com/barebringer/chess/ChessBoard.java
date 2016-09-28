@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
@@ -14,13 +15,15 @@ import java.util.Vector;
 
 public class ChessBoard extends View {
     public Vector<ChessPiece> board;
-    public char turn, player;
     public Vector<Bitmap> sprites;
-    public Bitmap boardImage;
-    public boolean isSpriteLoaded = false;
-    public Move clickedMove;
     public Vector<Move> highlightMoves;
-    int DEPTH;
+    public Vector<Move> undoMoveStack;
+    public Vector<ChessPiece> undoPieceStack;
+    public Bitmap boardImage;
+    public Move clickedMove;
+    int DEPTH = 4;
+    public char turn = 'w', player;
+    public boolean isSpriteLoaded = false;
 
     public ChessBoard(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -30,8 +33,10 @@ public class ChessBoard extends View {
     public void newBoard() {
         board = new Vector<>(64);
         sprites = new Vector<>(12);
-        clickedMove = new Move(-1, -1, -1, -1);
         highlightMoves = new Vector<>(0);
+        undoMoveStack = new Vector<>(0);
+        undoPieceStack = new Vector<>(0);
+        clickedMove = new Move(-1, -1, -1, -1);
         isSpriteLoaded = false;
         turn = 'w';
         DEPTH = 4;
@@ -43,6 +48,7 @@ public class ChessBoard extends View {
     }
 
     public int index(int i, int j) {
+        assert i > -1 && j > -1 && i < 8 && j < 8;
         return i * 8 + j;
     }
 
@@ -66,7 +72,8 @@ public class ChessBoard extends View {
         String state = "";
         state += Character.toString(player) + ":" + Character.toString(turn) + ":" + DEPTH + ":";
         for (int i = 0; i < board.size(); i++) {
-            state += Character.toString(board.get(i).type) + Character.toString(board.get(i).color) + ",";
+            state += Character.toString(board.get(i).type) + "-" + Character.toString(board.get(i).color) + "-" +
+                    board.get(i).noTouches + ",";
         }
         return state;
     }
@@ -78,7 +85,14 @@ public class ChessBoard extends View {
         DEPTH = Integer.parseInt(split[2]);
         String[] boardString = split[3].split(",");
         for (int i = 0; i < board.size(); i++) {
-            board.set(i, new ChessPiece(boardString[i].charAt(0), boardString[i].charAt(1)));
+            String[] pieceString = boardString[i].split("-");
+            board.set(i,
+                    new ChessPiece(
+                            pieceString[0].charAt(0),
+                            pieceString[1].charAt(0),
+                            Integer.parseInt(pieceString[2])
+                    )
+            );
         }
         render();
         cpuSimulation();
@@ -97,22 +111,10 @@ public class ChessBoard extends View {
         char ot = (t == 'w') ? 'b' : 'w';
         Vector<Move> moves = new MoveSet(board).allPiece(t);
         for (int i = 0; i < moves.size(); i++) {
-            int frow = moves.get(i).frow, fcol = moves.get(i).fcol;
-            int trow = moves.get(i).trow, tcol = moves.get(i).tcol;
             Vector<ChessPiece> backup = movePiece(moves.get(i), false);
-            score = getScore(backup.get(1));
+            score = getScore(backup);
             if (depth < DEPTH) score -= optimumMove(ot, depth + 1, score - maxMove.score).score;
-            board.set(index(frow, fcol), backup.get(0));
-            board.set(index(trow, tcol), backup.get(1));
-            if (moves.get(i).isCastle) {
-                if (moves.get(i).tcol > 4) {
-                    board.set(index(trow, 7), backup.get(2));
-                    board.set(index(trow, tcol - 1), backup.get(3));
-                } else if (moves.get(i).tcol < 4) {
-                    board.set(index(trow, 0), backup.get(2));
-                    board.set(index(trow, tcol + 1), backup.get(3));
-                }
-            }
+            restorePiece(moves.get(i), backup);
             if (score > maxMove.score) {
                 maxMove = moves.get(i);
                 maxMove.score = score;
@@ -123,65 +125,166 @@ public class ChessBoard extends View {
         return maxMove;
     }
 
+    public boolean winCheck(ChessPiece removed, char t) {
+        char ot = (t == 'w') ? 'b' : 'w';
+        if (removed.color == ot && removed.type == 'k') {
+            Toast.makeText(getContext(), "Game over\n" + Character.toString(t) + " Won", Toast.LENGTH_LONG).show();
+            return true;
+        }
+        return false;
+    }
+
+    public void checkCheck(Move move, char t) {
+        Vector<Move> moves = new MoveSet(board).piece(move.trow, move.tcol);
+        char ot = (t == 'w') ? 'b' : 'w';
+        for (int i = 0; i < moves.size(); i++) {
+            int row = moves.get(i).trow, col = moves.get(i).tcol;
+            if (board.get(index(row, col)).type == 'k' && board.get(index(row, col)).color == ot) {
+                Toast.makeText(getContext(), "Check", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+    }
+
+    public void undoMove() {
+        if (turn != player) return;
+        if (undoMoveStack.isEmpty()) {
+            Toast.makeText(getContext(), "No more moves", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Move undoMove = undoMoveStack.get(undoMoveStack.size() - 1);
+        undoMoveStack.remove(undoMoveStack.size() - 1);
+        Vector<ChessPiece> undoPiece = new Vector<>(0);
+        for (int i = 0; i < undoMove.noRemoved; i++) {
+            undoPiece.add(undoPieceStack.get(undoPieceStack.size() - 1));
+            undoPieceStack.remove(undoPieceStack.size() - 1);
+        }
+        for (int i = 0; i < undoPiece.size() / 2; i++) {
+            ChessPiece temp = undoPiece.get(i);
+            undoPiece.set(i, undoPiece.get(undoPiece.size() - i - 1));
+            undoPiece.set(undoPiece.size() - i - 1, temp);
+        }
+        restorePiece(undoMove, undoPiece);
+    }
+
     public Vector<ChessPiece> movePiece(Move move, boolean check) {
-        char ecolor = board.get(index(move.frow, move.fcol)).color;
-        ecolor = (ecolor == 'w') ? 'b' : 'w';
+        char t = board.get(index(move.frow, move.fcol)).color;
         Vector<ChessPiece> backup = new Vector<>(0);
+        ChessPiece fromPiece = new ChessPiece(
+                board.get(index(move.frow, move.fcol)).type,
+                board.get(index(move.frow, move.fcol)).color,
+                board.get(index(move.frow, move.fcol)).noTouches
+        );
+        ChessPiece toPiece = new ChessPiece(
+                board.get(index(move.trow, move.tcol)).type,
+                board.get(index(move.trow, move.tcol)).color,
+                board.get(index(move.trow, move.tcol)).noTouches
+        );
         if (check) {
-            if (board.get(index(move.trow, move.tcol)).type == 'k' && board.get(index(move.trow, move.tcol)).color == ecolor) {
-                Toast.makeText(getContext(), "Game over", Toast.LENGTH_LONG).show();
+            if (winCheck(toPiece, t)) {
                 newBoard();
                 return backup;
             }
         }
-        backup.add(new ChessPiece(board.get(index(move.frow, move.fcol)).type,
-                board.get(index(move.frow, move.fcol)).color,
-                board.get(index(move.frow, move.fcol)).touched));
-        backup.add(new ChessPiece(board.get(index(move.trow, move.tcol)).type,
-                board.get(index(move.trow, move.tcol)).color,
-                board.get(index(move.trow, move.tcol)).touched));
-        board.get(index(move.frow, move.fcol)).touched = true;
-        board.get(index(move.trow, move.tcol)).touched = true;
-        board.set(index(move.trow, move.tcol), board.get(index(move.frow, move.fcol)));
+        backup.add(fromPiece);
+        backup.add(toPiece);
+        board.set(index(move.trow, move.tcol),
+                new ChessPiece(
+                        board.get(index(move.frow, move.fcol)).type,
+                        board.get(index(move.frow, move.fcol)).color,
+                        board.get(index(move.frow, move.fcol)).noTouches + 1
+                )
+        );
         board.set(index(move.frow, move.fcol), new ChessPiece());
-        if (board.get(index(move.trow, move.tcol)).type == 'p') {
-            if (move.trow == 0 || move.trow == 7) {
-                board.get(index(move.trow, move.tcol)).type = 'q';
-            }
+        pawnTransformHandler(move);
+        backup.addAll(castleMoveHandler(move));
+        if (check) {
+            checkCheck(move, t);
+            move.noRemoved = backup.size();
+            undoMoveStack.add(move);
+            undoPieceStack.addAll(backup);
         }
+        return backup;
+    }
+
+    public void restorePiece(Move move, Vector<ChessPiece> backup) {
+        board.set(index(move.frow, move.fcol), backup.get(0));
+        backup.remove(0);
+        board.set(index(move.trow, move.tcol), backup.get(0));
+        backup.remove(0);
         if (move.isCastle) {
             if (move.tcol > 4) {
-                backup.add(new ChessPiece(board.get(index(move.trow, 7)).type,
-                        board.get(index(move.trow, 7)).color,
-                        board.get(index(move.trow, 7)).touched));
-                backup.add(new ChessPiece(board.get(index(move.trow, move.tcol - 1)).type,
-                        board.get(index(move.trow, move.tcol - 1)).color,
-                        board.get(index(move.trow, move.tcol - 1)).touched));
-                board.get(index(move.trow, 7)).touched = true;
-                board.get(index(move.trow, move.tcol - 1)).touched = true;
-                board.set(index(move.trow, move.tcol - 1), board.get(index(move.trow, 7)));
-                board.set(index(move.trow, 7), new ChessPiece());
+                board.set(index(move.trow, 7), backup.get(0));
+                backup.remove(0);
+                board.set(index(move.trow, move.tcol - 1), backup.get(0));
+                backup.remove(0);
             } else if (move.tcol < 4) {
-                backup.add(new ChessPiece(board.get(index(move.trow, 0)).type,
-                        board.get(index(move.trow, 0)).color,
-                        board.get(index(move.trow, 0)).touched));
-                backup.add(new ChessPiece(board.get(index(move.trow, move.tcol + 1)).type,
-                        board.get(index(move.trow, move.tcol + 1)).color,
-                        board.get(index(move.trow, move.tcol + 1)).touched));
-                board.get(index(move.trow, 0)).touched = true;
-                board.get(index(move.trow, move.tcol + 1)).touched = true;
-                board.set(index(move.trow, move.tcol + 1), board.get(index(move.trow, 0)));
-                board.set(index(move.trow, 0), new ChessPiece());
+                board.set(index(move.trow, 0), backup.get(0));
+                backup.remove(0);
+                board.set(index(move.trow, move.tcol + 1), backup.get(0));
+                backup.remove(0);
             }
         }
-        if (check) {
-            Vector<Move> moves = new MoveSet(board).piece(move.trow, move.tcol);
-            for (int i = 0; i < moves.size(); i++) {
-                int row = moves.get(i).trow, col = moves.get(i).tcol;
-                if (board.get(index(row, col)).type == 'k' && board.get(index(row, col)).color == ecolor) {
-                    Toast.makeText(getContext(), "Check", Toast.LENGTH_LONG).show();
-                    return backup;
-                }
+        assert backup.size() == 0;
+    }
+
+    public void pawnTransformHandler(Move move) {
+        if (board.get(index(move.trow, move.tcol)).type == 'p' && (move.trow == 0 || move.trow == 7)) {
+            board.set(index(move.trow, move.tcol),
+                    new ChessPiece(
+                            'q',
+                            board.get(index(move.trow, move.tcol)).color,
+                            board.get(index(move.trow, move.tcol)).noTouches
+                    )
+            );
+        }
+    }
+
+    public Vector<ChessPiece> castleMoveHandler(Move move) {
+        Vector<ChessPiece> backup = new Vector<>(0);
+        if (move.isCastle) {
+            if (move.tcol > 4) {
+                ChessPiece fromPiece = new ChessPiece(
+                        board.get(index(move.trow, 7)).type,
+                        board.get(index(move.trow, 7)).color,
+                        board.get(index(move.trow, 7)).noTouches
+                );
+                ChessPiece toPiece = new ChessPiece(
+                        board.get(index(move.trow, move.tcol - 1)).type,
+                        board.get(index(move.trow, move.tcol - 1)).color,
+                        board.get(index(move.trow, move.tcol - 1)).noTouches
+                );
+                backup.add(fromPiece);
+                backup.add(toPiece);
+                board.set(index(move.trow, move.tcol - 1),
+                        new ChessPiece(
+                                board.get(index(move.trow, 7)).type,
+                                board.get(index(move.trow, 7)).color,
+                                board.get(index(move.trow, 7)).noTouches + 1
+                        )
+                );
+                board.set(index(move.trow, 7), new ChessPiece());
+            } else if (move.tcol < 4) {
+                ChessPiece fromPiece = new ChessPiece(
+                        board.get(index(move.trow, 0)).type,
+                        board.get(index(move.trow, 0)).color,
+                        board.get(index(move.trow, 0)).noTouches
+                );
+                ChessPiece toPiece = new ChessPiece(
+                        board.get(index(move.trow, move.tcol + 1)).type,
+                        board.get(index(move.trow, move.tcol + 1)).color,
+                        board.get(index(move.trow, move.tcol + 1)).noTouches
+                );
+                backup.add(fromPiece);
+                backup.add(toPiece);
+                board.set(index(move.trow, move.tcol + 1),
+                        new ChessPiece(
+                                board.get(index(move.trow, 0)).type,
+                                board.get(index(move.trow, 0)).color,
+                                board.get(index(move.trow, 0)).noTouches + 1
+                        )
+                );
+                board.set(index(move.trow, 0), new ChessPiece());
             }
         }
         return backup;
@@ -232,8 +335,9 @@ public class ChessBoard extends View {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         float x = event.getX() / getWidth(), y = event.getY() / getHeight();
+        char ecolor = (player == 'w') ? 'b' : 'w';
         int row = (int) (y * 8), col = (int) (x * 8);
-        if (turn != player) return true;
+        if (turn == ecolor) return true;
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 playerFiniteState(row, col);
@@ -258,9 +362,12 @@ public class ChessBoard extends View {
             } else if (isValidMove(new Move(clickedMove.frow, clickedMove.fcol, row, col)) > -1) {
                 clickedMove.trow = row;
                 clickedMove.tcol = col;
-                clickedMove.isCastle = highlightMoves.get(isValidMove(
-                        new Move(clickedMove.frow, clickedMove.fcol, row, col)
-                )).isCastle;
+                clickedMove.isCastle = highlightMoves.get(
+                        isValidMove(
+                                new Move(clickedMove.frow, clickedMove.fcol, row, col)
+                        )
+                ).isCastle;
+                Log.d("ZZZ", clickedMove.frow + "" + clickedMove.fcol + "" + clickedMove.trow + "" + clickedMove.tcol);
                 movePiece(clickedMove, true);
                 clickedMove = new Move(-1, -1, -1, -1);
                 turn = (turn == 'w') ? 'b' : 'w';
@@ -274,27 +381,31 @@ public class ChessBoard extends View {
         }
     }
 
-    public int getScore(ChessPiece piece) {
+    public int getScore(Vector<ChessPiece> backup) {
         int score = 0;
-        switch (piece.type) {
-            case 'k':
-                score = DEPTH * 10;
-                break;
-            case 'q':
-                score = 9;
-                break;
-            case 'b':
-                score = 3;
-                break;
-            case 'h':
-                score = 3;
-                break;
-            case 'r':
-                score = 5;
-                break;
-            case 'p':
-                score = 1;
-                break;
+        for (int i = 1; i < backup.size(); i += 2) {
+            switch (backup.get(i).type) {
+                case 'k':
+                    score += DEPTH * 10;
+                    break;
+                case 'q':
+                    score += 9;
+                    break;
+                case 'b':
+                    score += 3;
+                    break;
+                case 'h':
+                    score += 3;
+                    break;
+                case 'r':
+                    score += 5;
+                    break;
+                case 'p':
+                    score += 1;
+                    break;
+                default:
+                    break;
+            }
         }
         return score;
     }

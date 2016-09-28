@@ -83,14 +83,14 @@ public class MoveSet {
         if (isValid(i - 1, j - 1) && board.get(index(i - 1, j - 1)).color != color) {
             moves.add(new Move(i, j, i - 1, j - 1));
         }
-        if (!board.get(index(i, j)).touched) {
-            if (board.get(index(i, 0)).type == 'r' && !board.get(index(i, 0)).touched &&
+        if (board.get(index(i, j)).noTouches == 0) {
+            if (board.get(index(i, 0)).type == 'r' && board.get(index(i, 0)).noTouches == 0 &&
                     board.get(index(i, 1)).type == ' ' && board.get(index(i, 2)).type == ' ' && board.get(index(i, 3)).type == ' ') {
                 Move move = new Move(i, j, i, j - 2);
                 move.isCastle = true;
                 moves.add(move);
             }
-            if (board.get(index(i, 7)).type == 'r' && !board.get(index(i, 7)).touched &&
+            if (board.get(index(i, 7)).type == 'r' && board.get(index(i, 7)).noTouches == 0 &&
                     board.get(index(i, 5)).type == ' ' && board.get(index(i, 6)).type == ' ') {
                 Move move = new Move(i, j, i, j + 2);
                 move.isCastle = true;
@@ -215,14 +215,13 @@ public class MoveSet {
 
     public Vector<Move> pawn(int i, int j) {
         char color = board.get(index(i, j)).color;
+        char ecolor = (color == 'w') ? 'b' : 'w';
         int inc = (color == 'w') ? -1 : 1;
         Vector<Move> moves = new Vector<>(0);
-        if (isValid(i + inc, j - 1) && board.get(index(i + inc, j - 1)).color != color &&
-                board.get(index(i + inc, j - 1)).color != ' ') {
+        if (isValid(i + inc, j - 1) && board.get(index(i + inc, j - 1)).color == ecolor) {
             moves.add(new Move(i, j, i + inc, j - 1));
         }
-        if (isValid(i + inc, j + 1) && board.get(index(i + inc, j + 1)).color != color &&
-                board.get(index(i + inc, j + 1)).color != ' ') {
+        if (isValid(i + inc, j + 1) && board.get(index(i + inc, j + 1)).color == ecolor) {
             moves.add(new Move(i, j, i + inc, j + 1));
         }
         if (isValid(i + inc, j) && board.get(index(i + inc, j)).color == ' ') {
