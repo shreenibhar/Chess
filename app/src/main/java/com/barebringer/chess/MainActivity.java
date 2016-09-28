@@ -80,13 +80,13 @@ public class MainActivity extends AppCompatActivity {
     public void getInput(String temp) {
         AlertDialog.Builder alert = new AlertDialog.Builder(this);
         alert.setTitle("Choose Sides");
-        alert.setPositiveButton("Evil Green", new DialogInterface.OnClickListener() {
+        alert.setPositiveButton("Black", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
                 board.player = 'b';
                 board.cpuSimulation();
             }
         });
-        alert.setNegativeButton("Gaudy Gold", new DialogInterface.OnClickListener() {
+        alert.setNegativeButton("White", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
                 board.player = 'w';
                 board.cpuSimulation();
