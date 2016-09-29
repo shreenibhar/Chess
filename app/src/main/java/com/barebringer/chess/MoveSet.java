@@ -31,15 +31,13 @@ public class MoveSet {
             }
         }
         Collections.shuffle(moves);
-        if (kingMoves.get(kingMoves.size() - 1).isCastle) {
-            moves.add(0, kingMoves.get(kingMoves.size() - 1));
-            kingMoves.remove(kingMoves.size() - 1);
-            if (kingMoves.get(kingMoves.size() - 1).isCastle) {
-                moves.add(0, kingMoves.get(kingMoves.size() - 1));
-                kingMoves.remove(kingMoves.size() - 1);
+        for (int i = 0; i < kingMoves.size(); i++) {
+            if (kingMoves.get(i).isCastle) {
+                moves.add(0, kingMoves.get(i));
+            } else {
+                moves.add(kingMoves.get(i));
             }
         }
-        moves.addAll(kingMoves);
         return moves;
     }
 
