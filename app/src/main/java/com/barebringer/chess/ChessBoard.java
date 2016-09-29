@@ -100,10 +100,10 @@ public class ChessBoard extends View {
     public void cpuSimulation() {
         if (turn == player) return;
         Move optMove = optimumMove(turn, 1, 30000);
-        undoPieceStack.addAll(movePiece(optMove));
+        winCheck(optMove, true);
         undoMoveStack.add(optMove);
+        undoPieceStack.addAll(movePiece(optMove));
         checkCheck(turn);
-        winCheck(turn, true);
         turn = (turn == 'w') ? 'b' : 'w';
         render();
     }
@@ -114,9 +114,10 @@ public class ChessBoard extends View {
         char ot = (t == 'w') ? 'b' : 'w';
         Vector<Move> moves = new MoveSet(board).allPiece(t);
         for (int i = 0; i < moves.size(); i++) {
+            boolean isWin = winCheck(moves.get(i), false);
             Vector<ChessPiece> backup = movePiece(moves.get(i));
             score = getScore(backup);
-            if (!winCheck(t, false) && depth < DEPTH)
+            if (!isWin && depth < DEPTH)
                 score -= optimumMove(ot, depth + 1, score - maxMove.score).score;
             restorePiece(moves.get(i), backup);
             if (score > maxMove.score) {
@@ -129,25 +130,12 @@ public class ChessBoard extends View {
         return maxMove;
     }
 
-    public boolean winCheck(char t, boolean check) {
-        boolean tKing = false;
-        boolean otKing = false;
-        char ot = (t == 'w') ? 'b' : 'w';
-        for (int i = 0; i < board.size(); i++) {
-            if (board.get(i).type == 'k') {
-                if (board.get(i).color == t) tKing = true;
-                else if (board.get(i).color == ot) otKing = true;
-            }
-        }
-        if (tKing && !otKing) {
+    public boolean winCheck(Move move, boolean check) {
+        ChessPiece removed = board.get(index(move.trow, move.tcol));
+        char t = board.get(index(move.frow, move.fcol)).color;
+        if (removed.type == 'k') {
             if (check) {
                 Toast.makeText(getContext(), Character.toString(t) + " won", Toast.LENGTH_LONG).show();
-                newBoard();
-            }
-            return true;
-        } else if (!tKing && otKing) {
-            if (check) {
-                Toast.makeText(getContext(), Character.toString(ot) + " won", Toast.LENGTH_LONG).show();
                 newBoard();
             }
             return true;
@@ -161,6 +149,7 @@ public class ChessBoard extends View {
             int row = moves.get(i).trow, col = moves.get(i).tcol;
             if (board.get(index(row, col)).type == 'k' && board.get(index(row, col)).color == ot) {
                 Toast.makeText(getContext(), "Check", Toast.LENGTH_LONG).show();
+                render();
                 return;
             }
         }
@@ -170,6 +159,7 @@ public class ChessBoard extends View {
         if (turn != player) return;
         if (undoMoveStack.isEmpty()) {
             Toast.makeText(getContext(), "No more moves", Toast.LENGTH_LONG).show();
+            render();
             return;
         }
         Move undoMove = undoMoveStack.get(undoMoveStack.size() - 1);
@@ -374,10 +364,10 @@ public class ChessBoard extends View {
                                 new Move(clickedMove.frow, clickedMove.fcol, row, col)
                         )
                 ).isCastle;
-                undoPieceStack.addAll(movePiece(clickedMove));
+                winCheck(clickedMove, true);
                 undoMoveStack.add(clickedMove);
+                undoPieceStack.addAll(movePiece(clickedMove));
                 checkCheck(turn);
-                winCheck(turn, true);
                 clickedMove = new Move(-1, -1, -1, -1);
                 turn = (turn == 'w') ? 'b' : 'w';
                 cpuSimulation();
