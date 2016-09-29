@@ -7,23 +7,13 @@
         app:showAsAction="never" />
 
     <item
-        android:id="@+id/action_load"
-        android:title="Load"
-        app:showAsAction="never" />
-
-    <item
-        android:id="@+id/action_save"
-        android:title="Save"
-        app:showAsAction="never" />
-
-    <item
         android:id="@+id/action_depth"
         android:title="Depth"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_undo"
-        android:title="Undo"
         android:icon="@drawable/undo"
-        app:showAsAction = "ifRoom" />
+        android:title="Undo"
+        app:showAsAction="ifRoom" />
 </menu>

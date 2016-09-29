@@ -19,7 +19,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         board = (ChessBoard) findViewById(R.id.main_board_chessboard);
-        getInput("");
     }
 
     @Override
@@ -32,7 +31,9 @@ public class MainActivity extends AppCompatActivity {
     public void save() {
         SharedPreferences sharedPreferences = getSharedPreferences("Chess", MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString("BoardState", board.getBoardState());
+        String state = board.getBoardState();
+        if (state.isEmpty()) return;
+        editor.putString("BoardState", state);
         editor.apply();
         Toast.makeText(getApplicationContext(), "Saved", Toast.LENGTH_SHORT).show();
     }
@@ -41,7 +42,6 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences sharedPreferences = getSharedPreferences("Chess", MODE_PRIVATE);
         String state = sharedPreferences.getString("BoardState", "");
         if (state.equals("")) {
-            Toast.makeText(getApplicationContext(), "No save detected", Toast.LENGTH_SHORT).show();
             getInput("");
             return;
         }
@@ -58,12 +58,6 @@ public class MainActivity extends AppCompatActivity {
                 SharedPreferences.Editor editor = sharedPreferences.edit();
                 editor.clear();
                 editor.apply();
-                return true;
-            case R.id.action_load:
-                load();
-                return true;
-            case R.id.action_save:
-                save();
                 return true;
             case R.id.action_depth:
                 getInput(0);
@@ -90,12 +84,6 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(DialogInterface dialog, int whichButton) {
                 board.player = 'w';
                 board.cpuSimulation();
-            }
-        });
-        alert.setNeutralButton("Load", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                load();
             }
         });
         alert.setCancelable(false);
@@ -125,5 +113,17 @@ public class MainActivity extends AppCompatActivity {
         });
         alert.setCancelable(false);
         alert.show();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        save();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        load();
     }
 }

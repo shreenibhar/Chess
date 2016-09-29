@@ -21,7 +21,7 @@ public class ChessBoard extends View {
     public Bitmap boardImage;
     public Move clickedMove;
     int DEPTH = 4;
-    public char turn = 'w', player;
+    public char turn = 'w', player = ' ';
     public boolean isSpriteLoaded = false;
 
     public ChessBoard(Context context, AttributeSet attrs) {
@@ -38,6 +38,7 @@ public class ChessBoard extends View {
         clickedMove = new Move(-1, -1, -1, -1);
         isSpriteLoaded = false;
         turn = 'w';
+        player = ' ';
         DEPTH = 4;
         for (int i = 0; i < 64; i++) board.add(new ChessPiece());
         for (int i = 0; i < 12; i++) sprites.add(boardImage);
@@ -69,6 +70,7 @@ public class ChessBoard extends View {
 
     public String getBoardState() {
         String state = "";
+        if (player == ' ') return state;
         state += Character.toString(player) + ":" + Character.toString(turn) + ":" + DEPTH + ":";
         for (int i = 0; i < board.size(); i++) {
             state += Character.toString(board.get(i).type) + "-" + Character.toString(board.get(i).color) + "-" +
@@ -98,9 +100,14 @@ public class ChessBoard extends View {
     }
 
     public void cpuSimulation() {
-        if (turn == player) return;
+        char ecolor = (player == 'w') ? 'b' : 'w';
+        if (turn != ecolor || player == ' ') return;
         Move optMove = optimumMove(turn, 1, 30000);
-        winCheck(optMove, true);
+        boolean isWin = winCheck(optMove, true);
+        if (isWin) {
+            newBoard();
+            return;
+        }
         Vector<ChessPiece> backup = movePiece(optMove);
         optMove.noRemoved = backup.size();
         undoMoveStack.add(optMove);
@@ -138,7 +145,7 @@ public class ChessBoard extends View {
         if (removed.type == 'k') {
             if (check) {
                 Toast.makeText(getContext(), Character.toString(t) + " won", Toast.LENGTH_LONG).show();
-                newBoard();
+                render();
             }
             return true;
         } else return false;
@@ -334,9 +341,8 @@ public class ChessBoard extends View {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         float x = event.getX() / getWidth(), y = event.getY() / getHeight();
-        char ecolor = (player == 'w') ? 'b' : 'w';
         int row = (int) (y * 8), col = (int) (x * 8);
-        if (turn == ecolor) return true;
+        if (turn != player || player == ' ') return true;
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 playerFiniteState(row, col);
@@ -366,7 +372,11 @@ public class ChessBoard extends View {
                                 new Move(clickedMove.frow, clickedMove.fcol, row, col)
                         )
                 ).isCastle;
-                winCheck(clickedMove, true);
+                boolean isWin = winCheck(clickedMove, true);
+                if (isWin) {
+                    newBoard();
+                    return;
+                }
                 Vector<ChessPiece> backup = movePiece(clickedMove);
                 clickedMove.noRemoved = backup.size();
                 undoMoveStack.add(clickedMove);
