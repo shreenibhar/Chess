@@ -6,7 +6,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
@@ -100,7 +99,9 @@ public class ChessBoard extends View {
 
     public void cpuSimulation() {
         if (turn == player) return;
-        movePiece(optimumMove(turn, 1, 30000), true);
+        movePiece(optimumMove(turn, 1, 30000));
+        checkCheck(turn);
+        winCheck(turn, true);
         turn = (turn == 'w') ? 'b' : 'w';
         render();
     }
@@ -111,9 +112,10 @@ public class ChessBoard extends View {
         char ot = (t == 'w') ? 'b' : 'w';
         Vector<Move> moves = new MoveSet(board).allPiece(t);
         for (int i = 0; i < moves.size(); i++) {
-            Vector<ChessPiece> backup = movePiece(moves.get(i), false);
+            Vector<ChessPiece> backup = movePiece(moves.get(i));
             score = getScore(backup);
-            if (depth < DEPTH) score -= optimumMove(ot, depth + 1, score - maxMove.score).score;
+            if (!winCheck(t, false) && depth < DEPTH)
+                score -= optimumMove(ot, depth + 1, score - maxMove.score).score;
             restorePiece(moves.get(i), backup);
             if (score > maxMove.score) {
                 maxMove = moves.get(i);
@@ -125,22 +127,38 @@ public class ChessBoard extends View {
         return maxMove;
     }
 
-    public boolean winCheck(ChessPiece removed, char t) {
+    public boolean winCheck(char t, boolean check) {
+        boolean tKing = false;
+        boolean otKing = false;
         char ot = (t == 'w') ? 'b' : 'w';
-        if (removed.color == ot && removed.type == 'k') {
-            Toast.makeText(getContext(), "Game over\n" + Character.toString(t) + " Won", Toast.LENGTH_LONG).show();
-            return true;
+        for (int i = 0; i < board.size(); i++) {
+            if (board.get(i).type == 'k') {
+                if (board.get(i).color == t) tKing = true;
+                else if (board.get(i).color == ot) otKing = true;
+            }
         }
-        return false;
+        if (tKing && !otKing) {
+            if (check) {
+                Toast.makeText(getContext(), Character.toString(t) + " won", Toast.LENGTH_LONG).show();
+                newBoard();
+            }
+            return true;
+        } else if (!tKing && otKing) {
+            if (check) {
+                Toast.makeText(getContext(), Character.toString(ot) + " won", Toast.LENGTH_LONG).show();
+                newBoard();
+            }
+            return true;
+        } else return false;
     }
 
-    public void checkCheck(Move move, char t) {
-        Vector<Move> moves = new MoveSet(board).piece(move.trow, move.tcol);
+    public void checkCheck(char t) {
         char ot = (t == 'w') ? 'b' : 'w';
+        Vector<Move> moves = new MoveSet(board).allPiece(t);
         for (int i = 0; i < moves.size(); i++) {
             int row = moves.get(i).trow, col = moves.get(i).tcol;
             if (board.get(index(row, col)).type == 'k' && board.get(index(row, col)).color == ot) {
-                Toast.makeText(getContext(), "Check", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "Check", Toast.LENGTH_LONG).show();
                 return;
             }
         }
@@ -149,7 +167,7 @@ public class ChessBoard extends View {
     public void undoMove() {
         if (turn != player) return;
         if (undoMoveStack.isEmpty()) {
-            Toast.makeText(getContext(), "No more moves", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), "No more moves", Toast.LENGTH_LONG).show();
             return;
         }
         Move undoMove = undoMoveStack.get(undoMoveStack.size() - 1);
@@ -167,8 +185,7 @@ public class ChessBoard extends View {
         restorePiece(undoMove, undoPiece);
     }
 
-    public Vector<ChessPiece> movePiece(Move move, boolean check) {
-        char t = board.get(index(move.frow, move.fcol)).color;
+    public Vector<ChessPiece> movePiece(Move move) {
         Vector<ChessPiece> backup = new Vector<>(0);
         ChessPiece fromPiece = new ChessPiece(
                 board.get(index(move.frow, move.fcol)).type,
@@ -180,12 +197,6 @@ public class ChessBoard extends View {
                 board.get(index(move.trow, move.tcol)).color,
                 board.get(index(move.trow, move.tcol)).noTouches
         );
-        if (check) {
-            if (winCheck(toPiece, t)) {
-                newBoard();
-                return backup;
-            }
-        }
         backup.add(fromPiece);
         backup.add(toPiece);
         board.set(index(move.trow, move.tcol),
@@ -198,12 +209,6 @@ public class ChessBoard extends View {
         board.set(index(move.frow, move.fcol), new ChessPiece());
         pawnTransformHandler(move);
         backup.addAll(castleMoveHandler(move));
-        if (check) {
-            checkCheck(move, t);
-            move.noRemoved = backup.size();
-            undoMoveStack.add(move);
-            undoPieceStack.addAll(backup);
-        }
         return backup;
     }
 
@@ -367,8 +372,9 @@ public class ChessBoard extends View {
                                 new Move(clickedMove.frow, clickedMove.fcol, row, col)
                         )
                 ).isCastle;
-                Log.d("ZZZ", clickedMove.frow + "" + clickedMove.fcol + "" + clickedMove.trow + "" + clickedMove.tcol);
-                movePiece(clickedMove, true);
+                movePiece(clickedMove);
+                checkCheck(turn);
+                winCheck(turn, true);
                 clickedMove = new Move(-1, -1, -1, -1);
                 turn = (turn == 'w') ? 'b' : 'w';
                 cpuSimulation();
@@ -386,9 +392,7 @@ public class ChessBoard extends View {
         for (int i = 1; i < backup.size(); i += 2) {
             switch (backup.get(i).type) {
                 case 'k':
-                    if (board.get(i).color == player)
-                        score += DEPTH * 10;
-                    else score += DEPTH * 20;
+                    score += DEPTH * 10;
                     break;
                 case 'q':
                     score += 9;
