@@ -101,8 +101,10 @@ public class ChessBoard extends View {
         if (turn == player) return;
         Move optMove = optimumMove(turn, 1, 30000);
         winCheck(optMove, true);
+        Vector<ChessPiece> backup = movePiece(optMove);
+        optMove.noRemoved = backup.size();
         undoMoveStack.add(optMove);
-        undoPieceStack.addAll(movePiece(optMove));
+        undoPieceStack.addAll(backup);
         checkCheck(turn);
         turn = (turn == 'w') ? 'b' : 'w';
         render();
@@ -365,8 +367,10 @@ public class ChessBoard extends View {
                         )
                 ).isCastle;
                 winCheck(clickedMove, true);
+                Vector<ChessPiece> backup = movePiece(clickedMove);
+                clickedMove.noRemoved = backup.size();
                 undoMoveStack.add(clickedMove);
-                undoPieceStack.addAll(movePiece(clickedMove));
+                undoPieceStack.addAll(backup);
                 checkCheck(turn);
                 clickedMove = new Move(-1, -1, -1, -1);
                 turn = (turn == 'w') ? 'b' : 'w';
