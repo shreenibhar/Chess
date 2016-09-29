@@ -30,21 +30,21 @@
     </item>
     <item
         is-multidex="false"
-        jar="/home/shreenivas/StudioProjects/Chess/app/build/intermediates/exploded-aar/com.android.support/support-core-ui/24.2.0/jars/classes.jar"
-        jumboMode="false"
-        optimize="true"
-        revision="24.0.2"
-        sha1="c84e216d9bf618464d6b9564d71d9a656433e7c4">
-        <dex dex="/home/shreenivas/StudioProjects/Chess/app/build/intermediates/pre-dexed/debug/com.android.support-support-core-ui-24.2.0_4e0a8d0a36ed6482ba783d36712bfb9ddb5adfec.jar" />
-    </item>
-    <item
-        is-multidex="false"
         jar="/home/shreenivas/StudioProjects/Chess/app/build/intermediates/exploded-aar/com.android.support/support-vector-drawable/24.2.0/jars/classes.jar"
         jumboMode="false"
         optimize="true"
         revision="24.0.2"
         sha1="beac40bcc8a320a896dd15f5109cfcaea5e1e0e3">
         <dex dex="/home/shreenivas/StudioProjects/Chess/app/build/intermediates/pre-dexed/debug/com.android.support-support-vector-drawable-24.2.0_d5a68e981d4d31083ac032441d12eb59cc9a9a49.jar" />
+    </item>
+    <item
+        is-multidex="false"
+        jar="/home/shreenivas/StudioProjects/Chess/app/build/intermediates/exploded-aar/com.android.support/support-core-ui/24.2.0/jars/classes.jar"
+        jumboMode="false"
+        optimize="true"
+        revision="24.0.2"
+        sha1="c84e216d9bf618464d6b9564d71d9a656433e7c4">
+        <dex dex="/home/shreenivas/StudioProjects/Chess/app/build/intermediates/pre-dexed/debug/com.android.support-support-core-ui-24.2.0_4e0a8d0a36ed6482ba783d36712bfb9ddb5adfec.jar" />
     </item>
     <item
         is-multidex="false"

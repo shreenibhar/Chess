@@ -99,7 +99,9 @@ public class ChessBoard extends View {
 
     public void cpuSimulation() {
         if (turn == player) return;
-        movePiece(optimumMove(turn, 1, 30000));
+        Move optMove = optimumMove(turn, 1, 30000);
+        undoPieceStack.addAll(movePiece(optMove));
+        undoMoveStack.add(optMove);
         checkCheck(turn);
         winCheck(turn, true);
         turn = (turn == 'w') ? 'b' : 'w';
@@ -372,7 +374,8 @@ public class ChessBoard extends View {
                                 new Move(clickedMove.frow, clickedMove.fcol, row, col)
                         )
                 ).isCastle;
-                movePiece(clickedMove);
+                undoPieceStack.addAll(movePiece(clickedMove));
+                undoMoveStack.add(clickedMove);
                 checkCheck(turn);
                 winCheck(turn, true);
                 clickedMove = new Move(-1, -1, -1, -1);
