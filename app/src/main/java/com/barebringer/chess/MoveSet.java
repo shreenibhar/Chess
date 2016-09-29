@@ -20,14 +20,26 @@ public class MoveSet {
 
     public Vector<Move> allPiece(char color) {
         Vector<Move> moves = new Vector<>(0);
+        Vector<Move> kingMoves = new Vector<>(0);
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
                 if (board.get(index(i, j)).color == color) {
-                    moves.addAll(piece(i, j));
+                    if (board.get(index(i, j)).type == 'k') {
+                        kingMoves.addAll(piece(i, j));
+                    } else moves.addAll(piece(i, j));
                 }
             }
         }
         Collections.shuffle(moves);
+        if (kingMoves.get(kingMoves.size() - 1).isCastle) {
+            moves.add(0, kingMoves.get(kingMoves.size() - 1));
+            kingMoves.remove(kingMoves.size() - 1);
+            if (kingMoves.get(kingMoves.size() - 1).isCastle) {
+                moves.add(0, kingMoves.get(kingMoves.size() - 1));
+                kingMoves.remove(kingMoves.size() - 1);
+            }
+        }
+        moves.addAll(kingMoves);
         return moves;
     }
 

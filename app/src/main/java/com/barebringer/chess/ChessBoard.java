@@ -386,7 +386,9 @@ public class ChessBoard extends View {
         for (int i = 1; i < backup.size(); i += 2) {
             switch (backup.get(i).type) {
                 case 'k':
-                    score += DEPTH * 10;
+                    if (board.get(i).color == player)
+                        score += DEPTH * 10;
+                    else score += DEPTH * 20;
                     break;
                 case 'q':
                     score += 9;
