@@ -112,7 +112,7 @@ public class ChessBoard extends View {
         optMove.noRemoved = backup.size();
         undoMoveStack.add(optMove);
         undoPieceStack.addAll(backup);
-        checkCheck(turn);
+        checkCheck(optMove);
         turn = (turn == 'w') ? 'b' : 'w';
         render();
     }
@@ -151,9 +151,10 @@ public class ChessBoard extends View {
         } else return false;
     }
 
-    public void checkCheck(char t) {
+    public void checkCheck(Move move) {
+        char t = board.get(index(move.trow, move.tcol)).color;
         char ot = (t == 'w') ? 'b' : 'w';
-        Vector<Move> moves = new MoveSet(board).allPiece(t);
+        Vector<Move> moves = new MoveSet(board).piece(move.trow, move.tcol);
         for (int i = 0; i < moves.size(); i++) {
             int row = moves.get(i).trow, col = moves.get(i).tcol;
             if (board.get(index(row, col)).type == 'k' && board.get(index(row, col)).color == ot) {
@@ -168,7 +169,6 @@ public class ChessBoard extends View {
         if (turn != player) return;
         if (undoMoveStack.isEmpty()) {
             Toast.makeText(getContext(), "No more moves", Toast.LENGTH_LONG).show();
-            render();
             return;
         }
         Move undoMove = undoMoveStack.get(undoMoveStack.size() - 1);
@@ -188,16 +188,8 @@ public class ChessBoard extends View {
 
     public Vector<ChessPiece> movePiece(Move move) {
         Vector<ChessPiece> backup = new Vector<>(0);
-        ChessPiece fromPiece = new ChessPiece(
-                board.get(index(move.frow, move.fcol)).type,
-                board.get(index(move.frow, move.fcol)).color,
-                board.get(index(move.frow, move.fcol)).noTouches
-        );
-        ChessPiece toPiece = new ChessPiece(
-                board.get(index(move.trow, move.tcol)).type,
-                board.get(index(move.trow, move.tcol)).color,
-                board.get(index(move.trow, move.tcol)).noTouches
-        );
+        ChessPiece fromPiece = board.get(index(move.frow, move.fcol));
+        ChessPiece toPiece = board.get(index(move.trow, move.tcol));
         backup.add(fromPiece);
         backup.add(toPiece);
         board.set(index(move.trow, move.tcol),
@@ -236,13 +228,7 @@ public class ChessBoard extends View {
 
     public void pawnTransformHandler(Move move) {
         if (board.get(index(move.trow, move.tcol)).type == 'p' && (move.trow == 0 || move.trow == 7)) {
-            board.set(index(move.trow, move.tcol),
-                    new ChessPiece(
-                            'q',
-                            board.get(index(move.trow, move.tcol)).color,
-                            board.get(index(move.trow, move.tcol)).noTouches
-                    )
-            );
+            board.get(index(move.trow, move.tcol)).type = 'q';
         }
     }
 
@@ -250,16 +236,8 @@ public class ChessBoard extends View {
         Vector<ChessPiece> backup = new Vector<>(0);
         if (move.isCastle) {
             if (move.tcol > 4) {
-                ChessPiece fromPiece = new ChessPiece(
-                        board.get(index(move.trow, 7)).type,
-                        board.get(index(move.trow, 7)).color,
-                        board.get(index(move.trow, 7)).noTouches
-                );
-                ChessPiece toPiece = new ChessPiece(
-                        board.get(index(move.trow, move.tcol - 1)).type,
-                        board.get(index(move.trow, move.tcol - 1)).color,
-                        board.get(index(move.trow, move.tcol - 1)).noTouches
-                );
+                ChessPiece fromPiece = board.get(index(move.trow, 7));
+                ChessPiece toPiece = board.get(index(move.trow, move.tcol - 1));
                 backup.add(fromPiece);
                 backup.add(toPiece);
                 board.set(index(move.trow, move.tcol - 1),
@@ -271,16 +249,8 @@ public class ChessBoard extends View {
                 );
                 board.set(index(move.trow, 7), new ChessPiece());
             } else if (move.tcol < 4) {
-                ChessPiece fromPiece = new ChessPiece(
-                        board.get(index(move.trow, 0)).type,
-                        board.get(index(move.trow, 0)).color,
-                        board.get(index(move.trow, 0)).noTouches
-                );
-                ChessPiece toPiece = new ChessPiece(
-                        board.get(index(move.trow, move.tcol + 1)).type,
-                        board.get(index(move.trow, move.tcol + 1)).color,
-                        board.get(index(move.trow, move.tcol + 1)).noTouches
-                );
+                ChessPiece fromPiece = board.get(index(move.trow, 0));
+                ChessPiece toPiece = board.get(index(move.trow, move.tcol + 1));
                 backup.add(fromPiece);
                 backup.add(toPiece);
                 board.set(index(move.trow, move.tcol + 1),
@@ -381,7 +351,7 @@ public class ChessBoard extends View {
                 clickedMove.noRemoved = backup.size();
                 undoMoveStack.add(clickedMove);
                 undoPieceStack.addAll(backup);
-                checkCheck(turn);
+                checkCheck(clickedMove);
                 clickedMove = new Move(-1, -1, -1, -1);
                 turn = (turn == 'w') ? 'b' : 'w';
                 cpuSimulation();

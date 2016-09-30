@@ -94,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog.Builder alert = new AlertDialog.Builder(this);
         final NumberPicker numberPicker = new NumberPicker(this);
         numberPicker.setMinValue(1);
-        numberPicker.setMaxValue(6);
+        numberPicker.setMaxValue(5);
         alert.setView(numberPicker);
         alert.setTitle("Choose Depth");
         alert.setPositiveButton("Set", new DialogInterface.OnClickListener() {
